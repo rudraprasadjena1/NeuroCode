@@ -1,7 +1,12 @@
-#main.py
 from scanner.scan import list_all_files
 from scanner.hashh import hash_file
-from scanner.cache import load_index, save_index, load_metadata, save_metadata
+from scanner.cache import (
+    load_index,
+    save_index,
+    load_metadata,
+    save_metadata,
+    save_dependencies
+)
 from parser.python_parser import parse_python_file
 import os
 
@@ -11,11 +16,17 @@ old_index = load_index()
 old_metadata = load_metadata()
 
 new_index = {}
-new_metadata = dict(old_metadata)  # copy existing
+new_metadata = dict(old_metadata)
 
 files = list_all_files(repo_root)
 
+metadata_exists = os.path.exists("storage/metadata.json")
+
 new = modified = unchanged = 0
+
+# -----------------------
+# Scan + parse
+# -----------------------
 
 for rel_path in files:
     full_path = os.path.join(repo_root, rel_path)
@@ -33,28 +44,78 @@ for rel_path in files:
     else:
         unchanged += 1
 
-    # Only parse changed Python files
-    if is_changed and rel_path.endswith(".py"):
+    should_parse = is_changed or not metadata_exists
+
+    if should_parse and rel_path.endswith(".py"):
         functions, imports, calls = parse_python_file(full_path)
 
         new_metadata[rel_path] = {
             "functions": functions,
             "imports": imports,
-            "calls":calls
+            "calls": calls   # raw for now
         }
 
-# Remove deleted files from metadata
+# Remove deleted files
 deleted_files = set(old_index.keys()) - set(new_index.keys())
 for f in deleted_files:
     new_metadata.pop(f, None)
 
 deleted = len(deleted_files)
 
+# -----------------------
+# Build project symbol table
+# -----------------------
+
+function_to_file = {}
+
+for file, data in new_metadata.items():
+    for fn in data.get("functions", []):
+        function_to_file[fn] = file
+
+# -----------------------
+# CLEAN metadata calls (project-only)
+# -----------------------
+
+for file, data in new_metadata.items():
+    clean_calls = []
+
+    for call in data.get("calls", []):
+        fn = call.split(".")[-1]
+
+        if fn in function_to_file:
+            clean_calls.append(call)
+
+    data["calls"] = clean_calls
+
+# -----------------------
+# Build file dependencies
+# -----------------------
+
+file_dependencies = {}
+
+for src_file, data in new_metadata.items():
+    deps = set()
+
+    for call in data.get("calls", []):
+        fn = call.split(".")[-1]
+
+        dst_file = function_to_file.get(fn)
+        if dst_file and dst_file != src_file:
+            deps.add(dst_file)
+
+    file_dependencies[src_file] = sorted(deps)
+
+# -----------------------
+# Save everything
+# -----------------------
+
 save_index(new_index)
 save_metadata(new_metadata)
+save_dependencies(file_dependencies)
 
 print(f"Files: {len(files)}")
 print(f"New: {new}")
 print(f"Modified: {modified}")
 print(f"Unchanged: {unchanged}")
 print(f"Deleted: {deleted}")
+print("metadata.json + dependencies.json updated")

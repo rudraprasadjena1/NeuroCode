@@ -207,3 +207,4 @@ marimo/_lsp/
 __marimo__/
 storage/index.json
 storage/metadata.json
+storage/dependencies.json
