@@ -1,0 +1,60 @@
+{
+  "nodes": [
+    {
+      "data": {
+        "id": "main.py"
+      }
+    },
+    {
+      "data": {
+        "id": "parser/python_parser.py"
+      }
+    },
+    {
+      "data": {
+        "id": "scanner/cache.py"
+      }
+    },
+    {
+      "data": {
+        "id": "scanner/hashh.py"
+      }
+    },
+    {
+      "data": {
+        "id": "scanner/scan.py"
+      }
+    },
+    {
+      "data": {
+        "id": "reset_storage.py"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "data": {
+        "source": "main.py",
+        "target": "parser/python_parser.py"
+      }
+    },
+    {
+      "data": {
+        "source": "main.py",
+        "target": "scanner/cache.py"
+      }
+    },
+    {
+      "data": {
+        "source": "main.py",
+        "target": "scanner/hashh.py"
+      }
+    },
+    {
+      "data": {
+        "source": "main.py",
+        "target": "scanner/scan.py"
+      }
+    }
+  ]
+}
