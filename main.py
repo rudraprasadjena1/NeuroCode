@@ -10,7 +10,7 @@ from scanner.cache import (
 from parser.python_parser import parse_python_file
 import os
 
-repo_root = r"D:\github\NeuroCode"
+repo_root = r"D:\github\SecureSphere"
 
 old_index = load_index()
 old_metadata = load_metadata()

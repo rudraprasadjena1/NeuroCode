@@ -6,48 +6,64 @@ import pathspec
 IGNORED_DIRS = {".git", "storage"}
 
 
-def load_gitignore_spec(root_dir: str) -> pathspec.PathSpec:
-    gitignore_path = Path(root_dir) / ".gitignore"
-    if not gitignore_path.exists():
-        return pathspec.PathSpec.from_lines("gitwildmatch", [])
+def load_gitignore(path: Path) -> pathspec.PathSpec | None:
+    gitignore = path / ".gitignore"
+    if not gitignore.exists():
+        return None
 
-    patterns = gitignore_path.read_text().splitlines()
+    patterns = gitignore.read_text().splitlines()
     return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
 
 
 def list_all_files(root_dir: str) -> list[str]:
-    root_dir = os.path.abspath(root_dir)
-    spec = load_gitignore_spec(root_dir)
-
+    root_dir = Path(root_dir).resolve()
     files: list[str] = []
 
+    # Stack of (directory_path, ignore_specs_active_here)
+    ignore_stack: dict[Path, list[pathspec.PathSpec]] = {}
+
     for root, dirnames, filenames in os.walk(root_dir):
+        root = Path(root)
 
-        # Get path relative to repo root
-        rel_root = os.path.relpath(root, root_dir).replace("\\", "/")
+        rel_root = root.relative_to(root_dir).as_posix()
 
-        # Skip .git completely
-        if rel_root in IGNORED_DIRS:
+        # Hard skip
+        if root.name in IGNORED_DIRS:
             dirnames.clear()
             continue
 
-        # Filter ignored directories
-        dirnames[:] = [
-            d for d in dirnames
-            if not spec.match_file(f"{rel_root}/{d}" if rel_root != "." else d)
-        ]
+        # Inherit ignore rules from parent
+        parent = root.parent
+        active_specs = list(ignore_stack.get(parent, []))
 
-        # Filter ignored files
-        for name in filenames:
-            rel_path = f"{rel_root}/{name}" if rel_root != "." else name
-            rel_path = rel_path.replace("\\", "/")
+        # Load local .gitignore (if present)
+        local_spec = load_gitignore(root)
+        if local_spec:
+            active_specs.append(local_spec)
 
-            if not spec.match_file(rel_path):
-                files.append(rel_path)
+        ignore_stack[root] = active_specs
 
+        # Filter directories
+        kept_dirs = []
+        for d in dirnames:
+            rel_path = (Path(rel_root) / d).as_posix() if rel_root != "." else d
+            if not any(spec.match_file(rel_path) for spec in active_specs):
+                kept_dirs.append(d)
+
+        dirnames[:] = kept_dirs
+
+        # Filter files
+        for f in filenames:
+            rel_path = (Path(rel_root) / f).as_posix() if rel_root != "." else f
+
+            if any(spec.match_file(rel_path) for spec in active_specs):
+                continue
+
+            files.append(rel_path)
 
     return files
 
 
-all_files = list_all_files(r"D:\github\NeuroCode")
-print(all_files)
+if __name__ == "__main__":
+    result = list_all_files(r"D:\github\NeuroCode")
+    print(result)

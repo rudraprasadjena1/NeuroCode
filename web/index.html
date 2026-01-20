@@ -22,7 +22,7 @@
     <div id="cy"></div>
 
     <script>
-      fetch("graph.json")
+      fetch("graph.json?ts=" + Date.now())
         .then((res) => res.json())
         .then((data) => {
           cytoscape({
