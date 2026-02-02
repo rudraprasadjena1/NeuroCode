@@ -4,8 +4,6 @@
 ![Status](https://img.shields.io/badge/Status-Active%20Development-orange)
 ![Inspired By](https://img.shields.io/badge/Inspired%20By-Obsidian-purple)
 
-![](https://komarev.com/ghpvc/?username=rudraprasadjena1)
-
 This project is a **code mapping and visualization tool** inspired by how **Obsidian** visualizes knowledge graphs. Instead of notes, it focuses on **source code**: files, functions, imports, and their relationships.
 
 Think of it as turning a codebase into a living map, where you can *see* how everything connects rather than mentally simulating it line by line.
